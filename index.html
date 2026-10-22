@@ -1,4 +1,4 @@
-
+```html
 <!doctype html>
 <html lang="ru">
 <head>
@@ -7,12 +7,11 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0c10">
   <title>ABUM Upgrader</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <main class="app">
-
     <header class="top">
       <div class="brand-mark">A</div>
       <div>
@@ -24,9 +23,7 @@
     <section class="panel welcome">
       <p class="eyebrow">ВАШ ПРОФИЛЬ</p>
       <h2 id="greeting">Добро пожаловать!</h2>
-      <p id="status" class="muted">
-        Подключаемся к серверу…
-      </p>
+      <p id="status" class="muted">Запуск приложения…</p>
     </section>
 
     <section class="panel">
@@ -34,9 +31,8 @@
         <h2>Инвентарь</h2>
         <span id="item-count" class="pill">0 предметов</span>
       </div>
-
       <div id="inventory" class="inventory">
-        <div class="empty">Загрузка инвентаря…</div>
+        <div class="empty">Ожидаем загрузку инвентаря…</div>
       </div>
     </section>
 
@@ -58,20 +54,18 @@
         <option value="">Загрузка каталога…</option>
       </select>
 
-      <p id="chance" class="muted">Шанс: —</p>
-
+      <p id="chance" class="muted">Шанс пока недоступен.</p>
       <button id="upgrade" disabled>Улучшить</button>
-
-      <p id="result" class="result" aria-live="polite"></p>
+      <p id="result" class="result" aria-live="polite">Запуск…</p>
     </section>
 
     <footer>
       <span>ABUM • UPGRADER</span>
       <span>Безопасность прежде всего</span>
     </footer>
-
   </main>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
+```
