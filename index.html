@@ -1,100 +1,140 @@
 ```html
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#0b0c10">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0b0d0c">
   <title>ABUM Upgrader</title>
-  <link rel="stylesheet" href="style.css?v=4">
+
+  <link rel="stylesheet" href="style.css?v=10">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <main class="app">
+  <div class="app-shell">
 
-    <header class="top">
-      <div class="brand-mark">A</div>
-      <div>
-        <p class="eyebrow">TELEGRAM MINI APP</p>
-        <h1>ABUM <span>UPGRADER</span></h1>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">A</div>
+        <div class="brand-text">
+          <span class="brand-caption">GIFT LAB</span>
+          <h1>ABUM<span>UPGRADER</span></h1>
+        </div>
+      </div>
+      <div class="online-indicator">
+        <span class="online-dot"></span>
+        LIVE
       </div>
     </header>
 
-    <section class="panel welcome">
-      <p class="eyebrow">ВАШ ПРОФИЛЬ</p>
-      <h2 id="greeting">Добро пожаловать!</h2>
-      <p id="status" class="muted">
-        Проверка страницы…
-      </p>
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <span class="section-tag">YOUR COLLECTION</span>
+        <h2>Каждый подарок<br>может стать <span>ценнее.</span></h2>
+        <p>Испытай удачу и открой новый уровень своей коллекции.</p>
+        <div class="hero-status">
+          <span class="status-dot"></span>
+          <span id="status">Подключаемся к серверу…</span>
+        </div>
+      </div>
+      <div class="hero-symbol">✳</div>
     </section>
 
-    <section class="panel">
-      <div class="section-head">
-        <h2>Инвентарь</h2>
-        <span id="item-count" class="pill">0 предметов</span>
+    <section class="section inventory-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-tag">MY ITEMS</span>
+          <h2>Мой инвентарь</h2>
+        </div>
+        <span id="item-count" class="count-badge">0 предметов</span>
       </div>
 
-      <div id="inventory" class="inventory">
-        <div class="empty">Ожидаем загрузку инвентаря…</div>
+      <div id="inventory" class="inventory-grid">
+        <div class="loading-card">
+          <div class="loading-symbol">✳</div>
+          <span>Загружаем коллекцию…</span>
+        </div>
       </div>
     </section>
 
-    <section class="panel">
-      <p class="eyebrow">АПГРЕЙД</p>
-      <h2>Улучши свой подарок</h2>
-      <p class="muted">
-        Выбери подарок из инвентаря и цель улучшения.
-        Перед попыткой проверь указанный шанс.
-      </p>
+    <section class="upgrade-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-tag">UPGRADE SYSTEM</span>
+          <h2>Улучшение подарка</h2>
+        </div>
+        <div class="upgrade-mark">↗</div>
+      </div>
 
-      <label for="item">Исходный подарок</label>
-      <select id="item" disabled>
-        <option value="">Загрузка инвентаря…</option>
-      </select>
+      <div class="upgrade-card">
+        <div class="upgrade-intro">
+          <div>
+            <span class="mini-label">01 / SOURCE</span>
+            <h3>Твой подарок</h3>
+          </div>
+          <div class="step-number">01</div>
+        </div>
 
-      <label for="target">Подарок для улучшения</label>
-      <select id="target" disabled>
-        <option value="">Загрузка каталога…</option>
-      </select>
+        <label for="item">Выбери предмет из инвентаря</label>
+        <select id="item" disabled>
+          <option value="">Загрузка инвентаря…</option>
+        </select>
 
-      <p id="chance" class="muted">Шанс: —</p>
+        <div class="connector">
+          <span class="connector-line"></span>
+          <span class="connector-icon">↓</span>
+          <span class="connector-line"></span>
+        </div>
 
-      <button id="upgrade" disabled>Улучшить</button>
+        <div class="upgrade-intro">
+          <div>
+            <span class="mini-label">02 / TARGET</span>
+            <h3>Желаемый подарок</h3>
+          </div>
+          <div class="step-number">02</div>
+        </div>
 
-      <p id="result" class="result" aria-live="polite">
-        Ожидаем запуск…
-      </p>
+        <label for="target">Во что хочешь улучшить?</label>
+        <select id="target" disabled>
+          <option value="">Загрузка каталога…</option>
+        </select>
+
+        <div class="chance-panel">
+          <div class="chance-copy">
+            <span class="mini-label">SUCCESS CHANCE</span>
+            <strong id="chance">Шанс: —</strong>
+          </div>
+          <div class="chance-icon">%</div>
+        </div>
+
+        <button id="upgrade" class="upgrade-button" disabled>
+          <span>Улучшить подарок</span>
+          <span class="button-arrow">↗</span>
+        </button>
+
+        <p id="result" class="result" aria-live="polite">
+          Выбери подарки, чтобы начать.
+        </p>
+      </div>
     </section>
 
-    <footer>
-      <span>ABUM • UPGRADER</span>
-      <span>Безопасность прежде всего</span>
+    <section class="info-strip">
+      <div class="info-icon">ⓘ</div>
+      <div>
+        <strong>Перед попыткой</strong>
+        <p>Проверь выбранные подарки и отображаемый шанс успеха.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-brand">ABUM <span>UPGRADER</span></div>
+      <span>GIFT LAB · 2026</span>
     </footer>
 
-  </main>
-
-  <script>
-    document.getElementById("status").textContent =
-      "Проверка страницы: HTML и встроенный JavaScript работают.";
-  </script>
+  </div>
 
   <script src="app.js?v=4"></script>
-
-  <script>
-    setTimeout(() => {
-      const status = document.getElementById("status");
-
-      if (
-        status &&
-        status.textContent.startsWith("Проверка страницы:")
-      ) {
-        status.textContent =
-          "ОШИБКА: app.js не изменил статус. Проверь загрузку файла.";
-      }
-    }, 2000);
-  </script>
-
 </body>
 </html>
 ```
