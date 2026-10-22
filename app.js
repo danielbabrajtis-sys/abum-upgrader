@@ -4,7 +4,6 @@
 
   const $ = (selector) => document.querySelector(selector);
   const tg = window.Telegram?.WebApp;
-
   const API_URL = "https://abum-upgrader-api.danielbabrajtis.workers.dev";
 
   const greeting = $("#greeting");
@@ -17,6 +16,10 @@
   const result = $("#result");
   const chanceText = $("#chance");
 
+  let gifts = [];
+  let inventoryItems = [];
+  let busy = false;
+
   function setStatus(message) {
     if (status) status.textContent = message;
   }
@@ -25,39 +28,34 @@
     if (result) result.textContent = message;
   }
 
+  function showEmpty(message) {
+    if (!inventory) return;
+    inventory.replaceChildren();
+
+    const element = document.createElement("div");
+    element.className = "empty";
+    element.textContent = message;
+    inventory.appendChild(element);
+  }
+
   function showError(message) {
-    setStatus("Ошибка: " + message);
+    setStatus(`Ошибка: ${message}`);
     setResult("Апгрейд временно недоступен.");
     console.error("ABUM Upgrader:", message);
   }
 
-  // Проверяем, что HTML содержит необходимые элементы.
+  // Проверяем, что все нужные элементы существуют в HTML.
   if (
-    !greeting ||
-    !status ||
-    !inventory ||
-    !count ||
-    !sourceSelect ||
-    !targetSelect ||
-    !upgrade ||
-    !result ||
-    !chanceText
+    !greeting || !status || !inventory || !count ||
+    !sourceSelect || !targetSelect || !upgrade ||
+    !result || !chanceText
   ) {
-    setStatus("Ошибка интерфейса: не найдены элементы HTML.");
-    console.error("ABUM Upgrader: проверь index.html и ID элементов.");
+    console.error("ABUM Upgrader: не найдены элементы HTML.");
+    setStatus("Ошибка интерфейса. Проверь index.html.");
     return;
   }
 
-  // Сразу показываем, что JavaScript действительно запустился.
-  setStatus("JavaScript загружен. Проверяем подключение к Telegram…");
-  greeting.textContent = "ABUM UPGRADER";
-  sourceSelect.disabled = true;
-  targetSelect.disabled = true;
-  upgrade.disabled = true;
-
-  let gifts = [];
-  let inventoryItems = [];
-  let busy = false;
+  setStatus("Скрипт запущен. Проверяем подключение к Telegram…");
 
   if (tg) {
     tg.ready();
@@ -69,24 +67,11 @@
     ? `Привет, ${user.first_name}!`
     : "Добро пожаловать!";
 
-  function showEmpty(message) {
-    inventory.replaceChildren();
+  sourceSelect.disabled = true;
+  targetSelect.disabled = true;
+  upgrade.disabled = true;
 
-    const element = document.createElement("div");
-    element.className = "empty";
-    element.textContent = message;
-
-    inventory.appendChild(element);
-  }
-
-  function addOption(select, value, label) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    select.appendChild(option);
-  }
-
-  function headers() {
+  function authHeaders() {
     return {
       "Content-Type": "application/json",
       "X-Telegram-Init-Data": tg?.initData || ""
@@ -100,13 +85,13 @@
       response = await fetch(`${API_URL}${path}`, {
         ...options,
         headers: {
-          ...headers(),
+          ...authHeaders(),
           ...(options.headers || {})
         }
       });
-    } catch (error) {
+    } catch {
       throw new Error(
-        "Не удалось связаться с сервером. Проверь адрес API и доступность Worker."
+        "Нет соединения с API. Проверь адрес сервера и настройки доступа."
       );
     }
 
@@ -115,18 +100,21 @@
     try {
       data = await response.json();
     } catch {
-      throw new Error(
-        `Сервер вернул не JSON. HTTP ${response.status}.`
-      );
+      throw new Error(`Сервер вернул некорректный ответ. HTTP ${response.status}.`);
     }
 
     if (!response.ok || data?.ok === false) {
-      throw new Error(
-        data?.error || `Ошибка сервера HTTP ${response.status}.`
-      );
+      throw new Error(data?.error || `Ошибка сервера HTTP ${response.status}.`);
     }
 
     return data;
+  }
+
+  function addOption(select, value, label) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
   }
 
   function getGift(code) {
@@ -150,10 +138,7 @@
       return 0;
     }
 
-    return Math.max(
-      1,
-      Math.min(70, (sourceValue / targetValue) * 70)
-    );
+    return Math.max(1, Math.min(70, sourceValue / targetValue * 70));
   }
 
   function updateChance() {
@@ -161,20 +146,17 @@
     const target = getGift(targetSelect.value);
     const owned = getInventoryItem(sourceSelect.value);
 
-    const valid =
-      !!source &&
-      !!target &&
-      !!owned &&
+    const valid = Boolean(
+      source &&
+      target &&
+      owned &&
       Number(owned.quantity) > 0 &&
-      Number(target.value) > Number(source.value);
+      Number(target.value) > Number(source.value)
+    );
 
-    if (valid) {
-      chanceText.textContent =
-        `Предварительный шанс: ${calculateChance(source, target).toFixed(2)}%`;
-    } else {
-      chanceText.textContent =
-        "Выбери исходный подарок и более дорогой целевой подарок.";
-    }
+    chanceText.textContent = valid
+      ? `Предварительный шанс: ${calculateChance(source, target).toFixed(2)}%`
+      : "Выбери исходный подарок и более дорогой целевой подарок.";
 
     upgrade.disabled = !valid || busy;
   }
@@ -251,10 +233,10 @@
 
   async function load() {
     if (!tg?.initData) {
-      showEmpty("Открой Mini App через Telegram.");
+      showEmpty("Открой Mini App через кнопку в Telegram.");
       count.textContent = "0 предметов";
       setStatus(
-        "Telegram не передал данные авторизации. Открой приложение кнопкой бота."
+        "Telegram не передал данные авторизации. Открой приложение через бота."
       );
       return;
     }
@@ -265,12 +247,11 @@
       const giftsData = await api("/api/gifts");
 
       if (!Array.isArray(giftsData.gifts)) {
-        throw new Error("Сервер не вернул список подарков.");
+        throw new Error("Сервер не вернул каталог подарков.");
       }
 
       gifts = giftsData.gifts;
-
-      setStatus("Каталог получен. Загружаем инвентарь…");
+      setStatus("Каталог загружен. Получаем инвентарь…");
 
       const inventoryData = await api("/api/inventory");
 
@@ -279,17 +260,17 @@
       }
 
       inventoryItems = inventoryData.inventory;
-
       renderInventory();
       renderSelects();
 
-      setStatus("Подключение успешно. Данные загружены.");
+      setStatus("Каталог и инвентарь загружены.");
       setResult(
         inventoryItems.length
-          ? "Выбери подарки для улучшения."
-          : "Инвентарь пуст. Сначала нужно добавить тестовый подарок."
+          ? "Выбери исходный и целевой подарки."
+          : "Инвентарь пуст. Сначала добавь тестовый подарок."
       );
     } catch (error) {
+      console.error("Ошибка загрузки ABUM Upgrader:", error);
       showError(error?.message || "Неизвестная ошибка загрузки.");
       showEmpty("Не удалось загрузить инвентарь.");
       count.textContent = "0 предметов";
@@ -313,11 +294,6 @@
       return;
     }
 
-    if (!tg?.initData) {
-      setResult("Открой приложение через Telegram.");
-      return;
-    }
-
     const sourceGift = getGift(source);
     const targetGift = getGift(target);
 
@@ -327,6 +303,11 @@
       Number(targetGift.value) <= Number(sourceGift.value)
     ) {
       setResult("Целевой подарок должен быть дороже исходного.");
+      return;
+    }
+
+    if (!tg?.initData) {
+      setResult("Открой приложение через Telegram.");
       return;
     }
 
@@ -344,7 +325,7 @@
 
       setResult(
         data.message ||
-        `Ответ сервера получен. Шанс: ${data.chance ?? "не указан"}%.`
+        `Ответ получен. Шанс: ${data.chance ?? "не указан"}%.`
       );
 
       const updated = await api("/api/inventory");
