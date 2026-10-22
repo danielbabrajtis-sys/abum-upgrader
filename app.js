@@ -23,12 +23,43 @@
   let busy = false;
   let loaded = false;
 
+  function showStatus(message) {
+    if (status) status.textContent = message;
+  }
+
+  function showResult(message) {
+    if (result) result.textContent = message;
+  }
+
+  function showEmpty(message) {
+    if (!inventory) return;
+
+    inventory.replaceChildren();
+
+    const element = document.createElement("div");
+    element.className = "empty";
+    element.textContent = message;
+
+    inventory.appendChild(element);
+  }
+
+  window.addEventListener("error", (event) => {
+    console.error("ABUM Upgrader JavaScript error:", event.message);
+    showStatus(`Ошибка JavaScript: ${event.message}`);
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    console.error("ABUM Upgrader promise error:", event.reason);
+    showStatus("Произошла ошибка приложения. Подробности в консоли.");
+  });
+
   if (
     !greeting || !status || !inventory || !count ||
     !sourceSelect || !targetSelect || !upgrade ||
     !result || !chanceText
   ) {
-    console.error("ABUM Upgrader: не найдены элементы HTML.");
+    showStatus("Ошибка: не найдены элементы страницы.");
+    console.error("ABUM Upgrader: missing HTML elements.");
     return;
   }
 
@@ -44,20 +75,6 @@
   sourceSelect.disabled = true;
   targetSelect.disabled = true;
   upgrade.disabled = true;
-
-  function showStatus(message) {
-    status.textContent = message;
-  }
-
-  function showEmpty(message) {
-    inventory.replaceChildren();
-
-    const element = document.createElement("div");
-    element.className = "empty";
-    element.textContent = message;
-
-    inventory.appendChild(element);
-  }
 
   function authHeaders() {
     return {
@@ -86,7 +103,7 @@
         data = await response.json();
       } catch {
         throw new Error(
-          `Некорректный ответ сервера (${response.status}).`
+          `Сервер вернул некорректный ответ (${response.status}).`
         );
       }
 
@@ -99,14 +116,12 @@
       return data;
     } catch (error) {
       if (error.name === "AbortError") {
-        throw new Error(
-          "Сервер не ответил за 10 секунд. Попробуй перезагрузить приложение."
-        );
+        throw new Error("Запрос занял больше 10 секунд.");
       }
 
       if (error instanceof TypeError) {
         throw new Error(
-          "Не удалось соединиться с сервером. Проверь интернет и настройки API."
+          "Ошибка соединения. Возможна проблема сети или CORS."
         );
       }
 
@@ -166,13 +181,9 @@
       Number(target.value) > Number(source.value)
     );
 
-    if (valid) {
-      chanceText.textContent =
-        `Шанс успеха: ${estimateChance(source, target).toFixed(2)}%`;
-    } else {
-      chanceText.textContent =
-        "Выбери исходный и более дорогой подарок.";
-    }
+    chanceText.textContent = valid
+      ? `Шанс успеха: ${estimateChance(source, target).toFixed(2)}%`
+      : "Выбери исходный и более дорогой подарок.";
 
     upgrade.disabled = !valid || busy;
   }
@@ -207,7 +218,7 @@
 
       if (item.value != null) {
         const value = document.createElement("small");
-        value.textContent = ` · Стоимость: ${item.value}`;
+        value.textContent = `Стоимость: ${item.value}`;
         card.appendChild(value);
       }
 
@@ -254,21 +265,26 @@
     targetSelect.disabled = true;
     upgrade.disabled = true;
 
+    showStatus("Проверяем запуск Telegram…");
+    showResult("Начинаем подключение…");
+
     if (!tg?.initData) {
-      showStatus("Открой приложение через кнопку в Telegram.");
-      showEmpty("Не удалось получить данные Telegram.");
+      showStatus("Telegram не передал данные авторизации.");
+      showResult(
+        "Открой Mini App кнопкой в Telegram, а не обычной ссылкой."
+      );
+      showEmpty("Нет данных для загрузки инвентаря.");
       count.textContent = "0 предметов";
       return;
     }
 
-    showStatus("Загружаем каталог подарков…");
-    result.textContent = "Подключаемся к серверу…";
-
     try {
+      showStatus("Загружаем каталог подарков…");
+
       const giftsData = await api("/api/gifts");
 
       if (!Array.isArray(giftsData.gifts)) {
-        throw new Error("Сервер вернул неверный каталог подарков.");
+        throw new Error("Неверный формат каталога.");
       }
 
       gifts = giftsData.gifts;
@@ -277,23 +293,26 @@
       const inventoryData = await api("/api/inventory");
 
       if (!Array.isArray(inventoryData.inventory)) {
-        throw new Error("Сервер вернул неверный инвентарь.");
+        throw new Error("Неверный формат инвентаря.");
       }
 
       inventoryItems = inventoryData.inventory;
-
       renderInventory();
+
       loaded = true;
       renderSelects();
 
       showStatus("Каталог и инвентарь загружены.");
-      result.textContent = inventoryItems.length
-        ? "Выбери исходный и целевой подарки."
-        : "Инвентарь пуст. Сначала добавь тестовый подарок.";
+      showResult(
+        inventoryItems.length
+          ? "Выбери исходный и целевой подарки."
+          : "Инвентарь пуст. Добавь подарок перед апгрейдом."
+      );
     } catch (error) {
       console.error("ABUM Upgrader load error:", error);
 
       showStatus(`Ошибка загрузки: ${error.message}`);
+      showResult(`Причина: ${error.message}`);
       showEmpty("Не удалось загрузить инвентарь.");
       count.textContent = "0 предметов";
 
@@ -301,8 +320,6 @@
       sourceSelect.disabled = true;
       targetSelect.disabled = true;
       upgrade.disabled = true;
-
-      result.textContent = "Апгрейды временно недоступны.";
     }
   }
 
@@ -315,11 +332,6 @@
     const source = sourceSelect.value;
     const target = targetSelect.value;
 
-    if (!source || !target) {
-      result.textContent = "Выбери оба подарка.";
-      return;
-    }
-
     const sourceGift = findGift(source);
     const targetGift = findGift(target);
     const owned = findInventory(source);
@@ -331,21 +343,15 @@
       !targetGift ||
       Number(targetGift.value) <= Number(sourceGift.value)
     ) {
-      result.textContent =
-        "Выбор некорректен. Обнови инвентарь и попробуй снова.";
-      return;
-    }
-
-    if (!tg?.initData) {
-      result.textContent = "Открой приложение через Telegram.";
+      showResult("Выбор неверный. Обнови инвентарь.");
       return;
     }
 
     busy = true;
-    upgrade.disabled = true;
     sourceSelect.disabled = true;
     targetSelect.disabled = true;
-    result.textContent = "Выполняем апгрейд…";
+    upgrade.disabled = true;
+    showResult("Выполняем апгрейд…");
 
     try {
       const data = await api("/api/upgrade", {
@@ -353,13 +359,14 @@
         body: JSON.stringify({ source, target })
       });
 
-      result.textContent =
-        `${data.message} Шанс: ${Number(data.chance).toFixed(2)}%.`;
+      showResult(
+        `${data.message} Шанс: ${Number(data.chance).toFixed(2)}%.`
+      );
 
       const inventoryData = await api("/api/inventory");
 
       if (!Array.isArray(inventoryData.inventory)) {
-        throw new Error("Апгрейд выполнен, но инвентарь не обновился.");
+        throw new Error("Не удалось обновить инвентарь.");
       }
 
       inventoryItems = inventoryData.inventory;
@@ -373,13 +380,11 @@
       }
     } catch (error) {
       console.error("ABUM Upgrader upgrade error:", error);
-      result.textContent = error.message || "Ошибка апгрейда.";
+      showResult(`Ошибка апгрейда: ${error.message}`);
     } finally {
       busy = false;
-
       sourceSelect.disabled = !loaded;
       targetSelect.disabled = !loaded;
-
       updateChance();
     }
   });
